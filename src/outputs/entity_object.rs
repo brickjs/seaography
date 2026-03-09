@@ -1,3 +1,4 @@
+use async_graphql::dynamic::ResolverContext;
 use async_graphql::{
     dynamic::{Field, FieldFuture, Object, ObjectAccessor},
     Value,
@@ -18,6 +19,8 @@ pub struct EntityObjectConfig {
     pub column_name: crate::ComplexNamingFn,
     /// suffix that is appended on basic version of entity type
     pub basic_type_suffix: String,
+
+    pub composite_id_value: crate::SimpleValueExtractorFn,
 }
 
 impl std::default::Default for EntityObjectConfig {
@@ -34,6 +37,18 @@ impl std::default::Default for EntityObjectConfig {
                 }
             }),
             basic_type_suffix: "Basic".into(),
+            composite_id_value: Box::new(
+                |ctx: &ResolverContext, column_name: &str| -> sea_orm::Value {
+                    sea_orm::Value::String(Some(
+                        ctx.args
+                            .try_get(column_name)
+                            .unwrap()
+                            .string()
+                            .unwrap()
+                            .to_string(),
+                    ))
+                },
+            ),
         }
     }
 }

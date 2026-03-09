@@ -1,13 +1,12 @@
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
-use heck::{ToLowerCamelCase, ToSnakeCase};
-use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter};
-
 use crate::{
     apply_order, apply_pagination, get_filter_conditions, get_having_conditions, guard_error,
     pluralize_unique, BuilderContext, ConnectionObjectBuilder, DatabaseContext, EntityColumnId,
     EntityObjectBuilder, FilterInputBuilder, GuardAction, HavingInputBuilder, OperationType,
     OrderInputBuilder, PaginationInput, PaginationInputBuilder, UserContext,
 };
+use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
+use heck::{ToLowerCamelCase, ToSnakeCase};
+use sea_orm::{DatabaseConnection, EntityTrait, Iden, IdenStatic, QueryFilter};
 
 /// The configuration structure for EntityQueryFieldBuilder
 pub struct EntityQueryFieldConfig {
@@ -131,15 +130,29 @@ impl EntityQueryFieldBuilder {
 
                     let mut stmt = T::find();
                     let mapper = TypesMapHelper { context };
-                    let column = T::PrimaryKey::iter()
+                    let columns: Vec<T::Column> = T::PrimaryKey::iter()
                         .map(|variant| variant.into_column())
-                        .collect::<Vec<T::Column>>()[0];
+                        .collect();
+                    // let column = columns[0];
+                    let column = columns.iter().find(|c| c.to_string() == "id").unwrap();
 
-                    let v = mapper.async_graphql_value_to_sea_orm_value::<T>(
+                    let id_value = mapper.async_graphql_value_to_sea_orm_value::<T>(
                         &column,
                         &ctx.args.try_get("id")?,
                     )?;
-                    stmt = stmt.filter(column.eq(v));
+                    stmt = stmt.filter(column.eq(id_value));
+
+                    if (columns.len() > 1) {
+                        for i in 0..columns.len() {
+                            let col = columns.get(i).unwrap();
+                            if (col.to_string() != "id") {
+                                let col_id = col.as_str();
+                                let value =
+                                    context.entity_object.composite_id_value.as_ref()(&ctx, col_id);
+                                stmt = stmt.filter(col.eq(value));
+                            }
+                        }
+                    }
 
                     let db = &ctx
                         .data::<DatabaseConnection>()?

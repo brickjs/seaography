@@ -319,5 +319,9 @@ pub mod schema;
 pub type SimpleNamingFn = Box<dyn Fn(&str) -> String + Sync + Send>;
 pub type ComplexNamingFn = Box<dyn Fn(&str, &str) -> String + Sync + Send>;
 
+pub type SimpleValueExtractorFn =
+    Box<dyn Fn(&ResolverContext, &str) -> sea_orm::Value + Sync + Send>;
+
 pub use async_graphql;
+use async_graphql::dynamic::ResolverContext;
 pub use lazy_static;
