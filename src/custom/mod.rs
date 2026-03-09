@@ -5,9 +5,11 @@ mod impls;
 mod input;
 mod output;
 mod types;
+mod viewer;
 
 #[cfg(not(feature = "strict-custom-types"))]
 pub use aux_types::*;
 pub use input::*;
 pub use output::*;
 pub use types::*;
+pub use viewer::*;

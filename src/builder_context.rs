@@ -4,7 +4,7 @@ use crate::{
     EntityDeleteMutationConfig, EntityInputConfig, EntityObjectConfig, EntityQueryFieldConfig,
     EntityUpdateMutationConfig, FilterInputConfig, HavingInputConfig, OffsetInputConfig,
     OrderByEnumConfig, OrderInputConfig, PageInfoObjectConfig, PageInputConfig,
-    PaginationInfoObjectConfig, PaginationInputConfig,
+    PaginationInfoObjectConfig, PaginationInputConfig, ViewerConfig,
 };
 
 pub mod entity_column_id;
@@ -55,6 +55,8 @@ pub struct BuilderContext {
     pub entity_delete_mutation: EntityDeleteMutationConfig,
 
     pub entity_input: EntityInputConfig,
+
+    pub viewer: ViewerConfig,
 
     pub hooks: LifecycleHooks,
     pub types: TypesMapConfig,

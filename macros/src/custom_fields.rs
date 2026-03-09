@@ -11,6 +11,7 @@ pub fn expand(
 ) -> syn::Result<TokenStream> {
     let mut impl_fields: Vec<TokenStream> = Vec::new();
     let mut field_calls: Vec<TokenStream> = Vec::new();
+    let mut field_names: Vec<String> = Vec::new();
     for item in input.items.iter() {
         if let ImplItem::Fn(item_fn) = item {
             let field_fn_ident = format_field_name(&item_fn.sig.ident);
@@ -18,6 +19,7 @@ pub fn expand(
                 signature_to_field(&item_fn.sig, &item_fn.sig.ident, &field_fn_ident, true)
                     .unwrap_or_else(Error::into_compile_error),
             );
+            field_names.push(item_fn.sig.ident.to_string().clone());
             field_calls.push(quote! {
                 Self::#field_fn_ident(context),
             });
@@ -34,6 +36,11 @@ pub fn expand(
         }
 
         impl seaography::CustomFields for #self_ty {
+            fn field_names() -> Vec<&'static str> {
+                vec![
+                    #(#field_names)*
+                ]
+            }
             fn to_fields(context: &'static seaography::BuilderContext) -> Vec<async_graphql::dynamic::Field> {
                 vec![
                     #(#field_calls)*

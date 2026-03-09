@@ -33,6 +33,7 @@ fn derive_custom_output_type_struct(
     name: TokenStream,
 ) -> syn::Result<TokenStream> {
     let orig_ident = &ast.ident;
+    let object_name = &ast.ident.to_string();
     let generics = &ast.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
@@ -78,6 +79,10 @@ fn derive_custom_output_type_struct(
         }
 
         impl #impl_generics seaography::CustomOutputObject for #orig_ident #ty_generics #where_clause {
+            fn object_name() -> &'static str {
+                #object_name
+            }
+
             fn basic_object(
                 context: &'static seaography::BuilderContext,
             ) -> async_graphql::dynamic::Object {

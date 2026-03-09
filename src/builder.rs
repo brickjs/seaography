@@ -1,12 +1,3 @@
-use async_graphql::{
-    dataloader::DataLoader,
-    dynamic::{
-        Enum, Field, FieldFuture, InputObject, Object, Scalar, Schema, SchemaBuilder, Subscription,
-        SubscriptionField, TypeRef, Union,
-    },
-};
-use sea_orm::{ActiveEnum, ActiveModelTrait, EntityTrait, IntoActiveModel};
-
 use crate::{
     ActiveEnumBuilder, ActiveEnumFilterInputBuilder, BuilderContext, ConnectionObjectBuilder,
     CursorInputBuilder, CustomEnum, CustomFields, CustomInputObject, CustomOutputObject,
@@ -18,6 +9,14 @@ use crate::{
     PaginationInfoObjectBuilder, PaginationInputBuilder, RelatedEntityFilter,
     RelatedEntityFilterField,
 };
+use async_graphql::{
+    dataloader::DataLoader,
+    dynamic::{
+        Enum, Field, FieldFuture, InputObject, Object, Scalar, Schema, SchemaBuilder, Subscription,
+        SubscriptionField, TypeRef, Union,
+    },
+};
+use sea_orm::{ActiveEnum, ActiveModelTrait, EntityTrait, IntoActiveModel};
 
 type MetadataHashMap = std::collections::HashMap<String, serde_json::Value>;
 
@@ -47,6 +46,12 @@ pub struct Builder {
 
     /// holds all entities queries
     pub queries: Vec<Field>,
+
+    /// hold viewer query, if defined
+    pub viewer_query: Option<Field>,
+
+    /// hold viewer output, if defined
+    pub viewer_output: Option<Object>,
 
     /// holds all entities mutations
     pub mutations: Vec<Field>,
@@ -92,6 +97,8 @@ impl Builder {
             mutation,
             subscription,
             schema,
+            viewer_query: None,
+            viewer_output: None,
             outputs: Vec::new(),
             inputs: Vec::new(),
             enumerations: Vec::new(),
@@ -342,7 +349,14 @@ impl Builder {
     where
         T: CustomOutputObject,
     {
-        self.outputs.push(T::basic_object(self.context));
+        let output = T::basic_object(self.context);
+        if self.context.viewer.object_name.is_some()
+            && T::object_name() == self.context.viewer.object_name.as_ref().unwrap()
+        {
+            self.viewer_output = Some(output);
+        } else {
+            self.outputs.push(output);
+        }
     }
 
     /// Register a custom output object without custom fields
@@ -371,7 +385,18 @@ impl Builder {
     where
         T: CustomFields,
     {
-        self.queries.append(&mut T::to_fields(self.context));
+        let names = T::field_names();
+        if self.context.viewer.field_name.is_some() {
+            let mut fields = T::to_fields(self.context);
+            let viewer_field = self.context.viewer.field_name.as_ref().unwrap();
+            let viewer_index = names.iter().position(|name| *name == viewer_field.as_str());
+            if viewer_index.is_some() {
+                self.viewer_query = Some(fields.remove(viewer_index.unwrap()));
+                self.queries.append(&mut fields);
+            } else {
+                self.queries.append(&mut T::to_fields(self.context));
+            }
+        }
     }
 
     pub fn register_custom_mutation<T>(&mut self)
@@ -454,10 +479,28 @@ impl Builder {
         let have_subscription = !self.subscriptions.is_empty();
 
         // register queries
-        let query = self
-            .queries
-            .into_iter()
-            .fold(query, |query, field| query.field(field));
+        // if viewer_query and viewer_output are defined,
+        // - register viewer_query to query
+        // - register all self.queries as fields of viewer_output
+        // - register viewer_output to schema
+        let (query, schema) = match self.viewer_query {
+            Some(viewer) => (
+                query.field(viewer),
+                match self.viewer_output {
+                    Some(viewer_object) => {
+                        let viewer_object = self
+                            .queries
+                            .into_iter()
+                            .fold(viewer_object, |viewer_object, field| {
+                                viewer_object.field(field)
+                            });
+                        schema.register(viewer_object)
+                    }
+                    None => schema,
+                },
+            ),
+            None => (query, schema),
+        };
 
         // register mutations
         let mutation = self

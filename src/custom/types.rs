@@ -46,6 +46,9 @@ pub use seaography_macros::{CustomEnum, CustomFields};
 /// }
 /// ```
 pub trait CustomFields {
+    // The name field of async_graphql::dynamic::field::Field is private.
+    // Store the field names in th same order of the field definitions.
+    fn field_names() -> Vec<&'static str>;
     fn to_fields(context: &'static BuilderContext) -> Vec<Field>;
 }
 

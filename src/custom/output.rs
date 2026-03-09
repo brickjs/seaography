@@ -34,6 +34,9 @@ pub trait CustomOutputType {
 }
 
 pub trait CustomOutputObject {
+    // The name field of async_graphql::dynamic::object::Object is private.
+    // object_name stores the value from the macro.
+    fn object_name() -> &'static str;
     fn basic_object(context: &'static BuilderContext) -> Object;
 }
 
