@@ -179,6 +179,75 @@ impl Builder {
         self.metadata.insert(T::default().to_string(), metadata);
     }
 
+    pub fn register_entity_with_custom_fields<T, CF>(
+        &mut self,
+        relations: Vec<Field>,
+        related_entity_filter: &RelatedEntityFilter<T>,
+    ) where
+        T: EntityTrait,
+        CF: CustomFields,
+        <T as EntityTrait>::Model: Sync,
+    {
+        let entity_object_builder = EntityObjectBuilder {
+            context: self.context,
+        };
+
+        let custom_fields = CF::to_fields(self.context);
+        let mut fields = Vec::new();
+        fields.extend(relations);
+        fields.extend(custom_fields);
+
+        let entity_object = fields.into_iter().fold(
+            entity_object_builder.to_object::<T>(),
+            |entity_object, field| entity_object.field(field),
+        );
+
+        let edge_object_builder = EdgeObjectBuilder {
+            context: self.context,
+        };
+        let edge = edge_object_builder.to_object::<T>();
+
+        let connection_object_builder = ConnectionObjectBuilder {
+            context: self.context,
+        };
+        let connection = connection_object_builder.to_object::<T>();
+
+        self.outputs.extend([entity_object, edge, connection]);
+
+        let filter_input_builder = FilterInputBuilder {
+            context: self.context,
+        };
+        let filter = filter_input_builder.to_object::<T>();
+
+        let having_input_builder = HavingInputBuilder {
+            context: self.context,
+        };
+        let having = having_input_builder.to_object::<T>(related_entity_filter);
+
+        let order_input_builder = OrderInputBuilder {
+            context: self.context,
+        };
+        let order = order_input_builder.to_object::<T>();
+
+        self.inputs.extend([filter, having, order]);
+
+        let entity_query_field_builder = EntityQueryFieldBuilder {
+            context: self.context,
+        };
+
+        if cfg!(feature = "field-pluralize") {
+            let query = entity_query_field_builder.to_singular_field::<T>();
+            self.queries.push(query);
+        }
+
+        let connection_query = entity_query_field_builder.to_field::<T>();
+        self.queries.push(connection_query);
+
+        let schema = sea_orm::Schema::new(self.connection.get_database_backend());
+        let metadata = schema.json_schema_from_entity(T::default());
+        self.metadata.insert(T::default().to_string(), metadata);
+    }
+
     /// Register a SeaORM entity to use the Model for input / ouput.
     /// No query / mutation will be added. Intended for use in custom operations.
     pub fn register_custom_entity<T>(&mut self)
@@ -386,17 +455,16 @@ impl Builder {
         T: CustomFields,
     {
         let names = T::field_names();
+        println!("register_custom_query names {:?}", names);
+        let mut fields = T::to_fields(self.context);
         if self.context.viewer.field_name.is_some() {
-            let mut fields = T::to_fields(self.context);
             let viewer_field = self.context.viewer.field_name.as_ref().unwrap();
             let viewer_index = names.iter().position(|name| *name == viewer_field.as_str());
             if viewer_index.is_some() {
                 self.viewer_query = Some(fields.remove(viewer_index.unwrap()));
-                self.queries.append(&mut fields);
-            } else {
-                self.queries.append(&mut T::to_fields(self.context));
             }
         }
+        self.queries.append(&mut fields);
     }
 
     pub fn register_custom_mutation<T>(&mut self)
@@ -736,9 +804,43 @@ macro_rules! register_entity {
 }
 
 #[macro_export]
+macro_rules! register_entity_with_custom_fields {
+    ($builder:expr, $module_path:ident, $custom_fields:ident) => {
+        seaography::register_entity_with_custom_fields!($builder, $module_path, $custom_fields, mutation: true);
+    };
+    ($builder:expr, $module_path:ident, $custom_fields:ident, mutation: $mutation:expr) => {
+        let relations =
+            <$module_path::RelatedEntity as sea_orm::Iterable>::iter()
+                .map(|rel| seaography::RelationBuilder::get_relation(&rel, $builder.context))
+                .collect();
+        let related_entity_filter =
+            seaography::RelatedEntityFilter::<$module_path::Entity>::build::<$module_path::RelatedEntity>($builder.context);
+
+        $builder.register_entity_with_custom_fields::<$module_path::Entity, $custom_fields>(relations, &related_entity_filter);
+
+        $builder =
+            $builder.register_entity_dataloader_one_to_one($module_path::Entity, tokio::spawn);
+        $builder =
+            $builder.register_entity_dataloader_one_to_many($module_path::Entity, tokio::spawn);
+        $builder =
+            $builder.register_related_entity_filter::<$module_path::Entity>(related_entity_filter);
+        if $mutation {
+            $builder.register_entity_mutations::<$module_path::Entity, $module_path::ActiveModel>();
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! register_entities {
     ($builder:expr, [$($module_paths:ident),+ $(,)?]) => {
         $(seaography::register_entity!($builder, $module_paths);)*
+    };
+}
+
+#[macro_export]
+macro_rules! register_entities_with_custom_fields {
+    ($builder:expr, [$($module_paths:ident),+ $(,)?]) => {
+        $(seaography::register_entity_with_custom_fields!($builder, $module_paths);)*
     };
 }
 
