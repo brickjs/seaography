@@ -1,4 +1,5 @@
 use darling::FromDeriveInput;
+use heck::{ToLowerCamelCase, ToSnakeCase};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Fields, Ident};
@@ -45,10 +46,16 @@ fn derive_custom_output_type_struct(
 
     for field in named.named.iter() {
         let field_ident = &field.ident;
+        let raw_field_name = field_ident.as_ref().unwrap().to_string();
+        let field_name = match cfg!(feature = "field-snake-case") {
+            true => raw_field_name.to_snake_case(),
+            false => raw_field_name.to_lower_camel_case(),
+        };
+
         let field_ty = &field.ty;
         fields.push(quote! {
             .field(async_graphql::dynamic::Field::new(
-                stringify!(#field_ident),
+                #field_name,
                 <#field_ty>::gql_output_type_ref(context),
                 move |ctx| {
                     async_graphql::dynamic::FieldFuture::new(async move {

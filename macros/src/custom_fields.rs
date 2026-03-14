@@ -1,3 +1,4 @@
+use heck::{ToLowerCamelCase, ToSnakeCase};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
@@ -38,7 +39,7 @@ pub fn expand(
         impl seaography::CustomFields for #self_ty {
             fn field_names() -> Vec<&'static str> {
                 vec![
-                    #(#field_names)*
+                    #(#field_names,)*
                 ]
             }
             fn to_fields(context: &'static seaography::BuilderContext) -> Vec<async_graphql::dynamic::Field> {
@@ -62,7 +63,13 @@ fn signature_to_field(
     is_member: bool,
 ) -> syn::Result<TokenStream> {
     let fn_ident: &Ident = &sig.ident;
-    let field_name = fn_ident;
+
+    let raw_field_name = fn_ident.to_string();
+    let field_name = match cfg!(feature = "field-snake-case") {
+        true => raw_field_name.to_snake_case(),
+        false => raw_field_name.to_lower_camel_case(),
+    };
+
     let return_type: TokenStream = return_type_to_type_ref(&sig.output)?;
     let mut arguments: Vec<TokenStream> = Vec::new();
     let mut resolve_args: Vec<TokenStream> = Vec::new();
@@ -160,7 +167,7 @@ fn signature_to_field(
             #imports
 
             async_graphql::dynamic::Field::new(
-                stringify!(#field_name),
+                #field_name,
                 <#return_type>::gql_output_type_ref(context),
                 move |ctx| {
                     async_graphql::dynamic::FieldFuture::new(async move {
