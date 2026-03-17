@@ -1,4 +1,5 @@
 use darling::FromDeriveInput;
+use heck::{ToLowerCamelCase, ToSnakeCase};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Field, Fields, Ident};
@@ -55,6 +56,12 @@ fn derive_custom_input_type_struct(
 
     for field in fields.iter() {
         let field_ident = &field.ident;
+        let raw_field_name = field_ident.as_ref().unwrap().to_string();
+        let field_name = match cfg!(feature = "field-snake-case") {
+            true => raw_field_name.to_snake_case(),
+            false => raw_field_name.to_lower_camel_case(),
+        };
+
         let field_ty = &field.ty;
 
         resolve_args.push(quote! {
@@ -66,7 +73,7 @@ fn derive_custom_input_type_struct(
 
         dynamic_fields.push(quote! {
             .field(async_graphql::dynamic::InputValue::new(
-                stringify!(#field_ident),
+                #field_name,
                 <#field_ty>::gql_input_type_ref(context),
             ))
         });
