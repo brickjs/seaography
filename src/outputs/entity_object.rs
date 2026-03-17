@@ -1,4 +1,4 @@
-use async_graphql::dynamic::ResolverContext;
+use async_graphql::dynamic::{ResolverContext, TypeRef};
 use async_graphql::{
     dynamic::{Field, FieldFuture, Object, ObjectAccessor},
     Value,
@@ -21,6 +21,8 @@ pub struct EntityObjectConfig {
     pub basic_type_suffix: String,
 
     pub composite_id_value: crate::SimpleValueExtractorFn,
+
+    pub short_id_value: Option<crate::SimpleNamingFn>,
 }
 
 impl std::default::Default for EntityObjectConfig {
@@ -49,6 +51,7 @@ impl std::default::Default for EntityObjectConfig {
                     ))
                 },
             ),
+            short_id_value: None,
         }
     }
 }
@@ -128,7 +131,7 @@ impl EntityObjectBuilder {
             context: self.context,
         };
 
-        T::Column::iter().fold(
+        let entity_object = T::Column::iter().fold(
             Object::new(&object_name),
             move |object, column: T::Column| {
                 let object_name = object_name.clone();
@@ -207,7 +210,21 @@ impl EntityObjectBuilder {
 
                 object.field(field)
             },
-        )
+        );
+        let sid_field = match &self.context.entity_object.short_id_value {
+            Some(short_id) => {
+                let field = Field::new("sid", TypeRef::named(TypeRef::STRING), move |ctx| {
+                    FieldFuture::from_value(Some(Value::String("sid".to_owned())))
+                });
+                Some(field)
+            }
+            None => None,
+        };
+        if sid_field.is_some() {
+            entity_object.field(sid_field.unwrap())
+        } else {
+            entity_object
+        }
     }
 
     pub fn parse_object<M>(&self, object: &ObjectAccessor) -> SeaResult<M>
