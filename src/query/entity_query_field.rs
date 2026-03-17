@@ -249,7 +249,7 @@ impl EntityQueryFieldBuilder {
                         let col_name = key.to_snake_case();
                         let col = T::Column::iter()
                             .find(|col| col.to_string() == col_name)
-                            .unwrap();
+                            .expect(format!("Column {} is not found", key).as_str());
                         if direction.to_uppercase().eq("DESC") {
                             order_by.push((col, sea_orm::Order::Desc));
                         } else {
