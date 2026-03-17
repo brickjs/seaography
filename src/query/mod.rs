@@ -20,4 +20,6 @@ pub mod entity_object_relation;
 pub use entity_object_relation::*;
 
 pub mod entity_object_via_relation;
+mod entity_query_sid_field;
+
 pub use entity_object_via_relation::*;
