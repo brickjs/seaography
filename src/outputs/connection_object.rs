@@ -1,4 +1,5 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, Object, TypeRef};
+use async_graphql::Value;
 use sea_orm::EntityTrait;
 
 use crate::{
@@ -21,12 +22,18 @@ where
 
     /// vector of data vector
     pub edges: Vec<Edge<T>>,
+
+    pub page: u64,
+    pub offset: u64,
+    pub size: u64,
+    pub total: u64,
 }
 
 /// The configuration structure for ConnectionObjectBuilder
 pub struct ConnectionObjectConfig {
     /// used to format the type name of the object
     pub type_name: crate::SimpleNamingFn,
+    pub type_complex_name: Option<crate::ComplexNamingFn>,
     /// name for 'pageInfo' field
     pub page_info: String,
     /// name for 'paginationInfo' field
@@ -35,6 +42,10 @@ pub struct ConnectionObjectConfig {
     pub edges: String,
     /// name for 'nodes' field
     pub nodes: String,
+    pub page: String,
+    pub offset: String,
+    pub size: String,
+    pub total: String,
 }
 
 impl std::default::Default for ConnectionObjectConfig {
@@ -43,6 +54,7 @@ impl std::default::Default for ConnectionObjectConfig {
             type_name: Box::new(|object_name: &str| -> String {
                 format!("{object_name}Connection")
             }),
+            type_complex_name: None,
             page_info: {
                 if cfg!(feature = "field-snake-case") {
                     "page_info"
@@ -61,6 +73,10 @@ impl std::default::Default for ConnectionObjectConfig {
             },
             edges: "edges".into(),
             nodes: "nodes".into(),
+            page: "page".to_string(),
+            offset: "offset".to_string(),
+            size: "size".to_string(),
+            total: "total".to_string(),
         }
     }
 }
@@ -73,8 +89,17 @@ pub struct ConnectionObjectBuilder {
 impl ConnectionObjectBuilder {
     /// used to get type name
     pub fn type_name(&self, object_name: &str) -> String {
+        let table_name = object_name;
         let object_name = pluralize_unique(object_name, true);
-        self.context.connection_object.type_name.as_ref()(&object_name)
+        if self.context.connection_object.type_complex_name.is_some() {
+            self.context
+                .connection_object
+                .type_complex_name
+                .as_ref()
+                .unwrap()(&object_name, &table_name)
+        } else {
+            self.context.connection_object.type_name.as_ref()(&object_name)
+        }
     }
 
     /// used to get the Connection object for a SeaORM entity
@@ -145,6 +170,46 @@ impl ConnectionObjectBuilder {
                                 .iter()
                                 .map(|edge: &Edge<T>| FieldValue::borrowed_any(edge)),
                         )))
+                    })
+                },
+            ))
+            .field(Field::new(
+                &self.context.connection_object.page,
+                TypeRef::named(TypeRef::INT),
+                |ctx| {
+                    FieldFuture::new(async move {
+                        let connection = ctx.parent_value.try_downcast_ref::<Connection<T>>()?;
+                        Ok(Some(Value::from(connection.page)))
+                    })
+                },
+            ))
+            .field(Field::new(
+                &self.context.connection_object.size,
+                TypeRef::named(TypeRef::INT),
+                |ctx| {
+                    FieldFuture::new(async move {
+                        let connection = ctx.parent_value.try_downcast_ref::<Connection<T>>()?;
+                        Ok(Some(Value::from(connection.size)))
+                    })
+                },
+            ))
+            .field(Field::new(
+                &self.context.connection_object.offset,
+                TypeRef::named(TypeRef::INT),
+                |ctx| {
+                    FieldFuture::new(async move {
+                        let connection = ctx.parent_value.try_downcast_ref::<Connection<T>>()?;
+                        Ok(Some(Value::from(connection.offset)))
+                    })
+                },
+            ))
+            .field(Field::new(
+                &self.context.connection_object.total,
+                TypeRef::named(TypeRef::INT),
+                |ctx| {
+                    FieldFuture::new(async move {
+                        let connection = ctx.parent_value.try_downcast_ref::<Connection<T>>()?;
+                        Ok(Some(Value::from(connection.total)))
                     })
                 },
             ))

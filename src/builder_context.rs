@@ -3,8 +3,8 @@ use crate::{
     EdgeObjectConfig, EntityCreateBatchMutationConfig, EntityCreateOneMutationConfig,
     EntityDeleteMutationConfig, EntityInputConfig, EntityObjectConfig, EntityQueryFieldConfig,
     EntityUpdateMutationConfig, FilterInputConfig, HavingInputConfig, OffsetInputConfig,
-    OrderByEnumConfig, OrderInputConfig, PageInfoObjectConfig, PageInputConfig,
-    PaginationInfoObjectConfig, PaginationInputConfig, ViewerConfig,
+    OrderByEnumConfig, OrderInputConfig, PageArgsInputConfig, PageInfoObjectConfig,
+    PageInputConfig, PaginationInfoObjectConfig, PaginationInputConfig, ViewerConfig,
 };
 
 pub mod entity_column_id;
@@ -33,6 +33,7 @@ pub struct BuilderContext {
 
     pub cursor_input: CursorInputConfig,
     pub page_input: PageInputConfig,
+    pub page_args_input: PageArgsInputConfig,
     pub offset_input: OffsetInputConfig,
     pub pagination_input: PaginationInputConfig,
 

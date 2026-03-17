@@ -1,8 +1,9 @@
 use crate::{
     apply_order, apply_pagination, get_filter_conditions, get_having_conditions, guard_error,
     pluralize_unique, BuilderContext, ConnectionObjectBuilder, DatabaseContext, EntityColumnId,
-    EntityObjectBuilder, FilterInputBuilder, GuardAction, HavingInputBuilder, OperationType,
-    OrderInputBuilder, PaginationInput, PaginationInputBuilder, UserContext,
+    EntityObjectBuilder, FilterInputBuilder, GuardAction, HavingInputBuilder, OffsetInput,
+    OperationType, OrderInputBuilder, PageArgsInput, PageArgsInputBuilder, PageInput,
+    PaginationInput, PaginationInputBuilder, UserContext,
 };
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use heck::{ToLowerCamelCase, ToSnakeCase};
@@ -20,6 +21,8 @@ pub struct EntityQueryFieldConfig {
     pub order_by: String,
     /// name for 'pagination' field
     pub pagination: String,
+    /// name for 'page_args' field
+    pub page_args: String,
     /// if false, `is_null` and `is_not_null` are two separate fields.
     /// if true, `is_null` accepts `bool` and `is_null: false` means `is_not_null`;
     /// `is_not_null` will be removed.
@@ -49,6 +52,7 @@ impl std::default::Default for EntityQueryFieldConfig {
                 .into()
             },
             pagination: "pagination".into(),
+            page_args: "pageArgs".into(),
             combine_is_null_is_not_null: true,
             use_ilike: false,
         }
@@ -142,10 +146,10 @@ impl EntityQueryFieldBuilder {
                     )?;
                     stmt = stmt.filter(column.eq(id_value));
 
-                    if (columns.len() > 1) {
+                    if columns.len() > 1 {
                         for i in 0..columns.len() {
                             let col = columns.get(i).unwrap();
-                            if (col.to_string() != "id") {
+                            if col.to_string() != "id" {
                                 let col_id = col.as_str();
                                 let value =
                                     context.entity_object.composite_id_value.as_ref()(&ctx, col_id);
@@ -191,6 +195,9 @@ impl EntityQueryFieldBuilder {
         let entity_object = EntityObjectBuilder {
             context: self.context,
         };
+        let page_args_input_builder = PageArgsInputBuilder {
+            context: self.context,
+        };
 
         let object_name = pluralize_unique(&entity_object.type_name::<T>(), true);
         let object_name_ = object_name.clone();
@@ -216,8 +223,25 @@ impl EntityQueryFieldBuilder {
                 let order_by = ctx.args.get(&context.entity_query_field.order_by);
                 let order_by = OrderInputBuilder { context }.parse_object::<T>(order_by)?;
                 let pagination = ctx.args.get(&context.entity_query_field.pagination);
-                let pagination: PaginationInput =
+                let mut pagination: PaginationInput =
                     PaginationInputBuilder { context }.parse_object(pagination)?;
+                let page_args = ctx.args.get(&context.entity_query_field.page_args);
+                let page_args: PageArgsInput =
+                    PageArgsInputBuilder { context }.parse_object(page_args)?;
+
+                if (page_args.size > 0) {
+                    pagination = PaginationInput {
+                        cursor: None,
+                        page: Some(PageInput {
+                            page: page_args.page,
+                            limit: page_args.size,
+                        }),
+                        offset: Some(OffsetInput {
+                            offset: page_args.page * page_args.size,
+                            limit: page_args.size,
+                        }),
+                    }
+                }
 
                 let mut stmt = T::find();
                 if let Some(filter) = hooks.entity_filter(&ctx, &object_name, OperationType::Read) {
@@ -250,6 +274,10 @@ impl EntityQueryFieldBuilder {
         .argument(InputValue::new(
             &self.context.entity_query_field.pagination,
             TypeRef::named(pagination_input_builder.type_name()),
+        ))
+        .argument(InputValue::new(
+            &self.context.entity_query_field.page_args,
+            TypeRef::named(page_args_input_builder.type_name()),
         ))
     }
 }

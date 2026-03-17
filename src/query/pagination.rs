@@ -126,6 +126,10 @@ where
                 end_cursor,
             },
             pagination_info: None,
+            page: 0,
+            offset: 0,
+            size: 0,
+            total: 0,
         })
     } else if let Some(page_object) = pagination.page {
         check_limit(context, page_object.limit)?;
@@ -164,6 +168,10 @@ where
                 offset: page_object.page * page_object.limit,
                 total: paginator_info.number_of_items,
             }),
+            page: page_object.page,
+            offset: page_object.page * page_object.limit,
+            size: page_object.limit,
+            total: paginator_info.number_of_items,
         })
     } else if let Some(offset_object) = pagination.offset {
         check_limit(context, offset_object.limit)?;
@@ -216,6 +224,10 @@ where
                 total,
                 offset,
             }),
+            page: f64::ceil(offset as f64 / limit as f64) as u64,
+            offset,
+            size: limit,
+            total,
         })
     } else {
         let data = stmt.all(db).await?;
@@ -250,6 +262,10 @@ where
                 offset: 0,
                 total,
             }),
+            page: 1,
+            offset: 0,
+            size: 10,
+            total,
         })
     }
 }
@@ -323,6 +339,10 @@ where
                 offset: current * cursor_object.limit,
                 total,
             }),
+            page: current,
+            offset: current * cursor_object.limit,
+            size: cursor_object.limit,
+            total,
         })
     } else if let Some(page_object) = pagination.page {
         check_limit(context, page_object.limit)?;
@@ -356,6 +376,10 @@ where
                 offset: page_object.page * page_object.limit,
                 total,
             }),
+            page: page_object.page,
+            offset: page_object.page * page_object.limit,
+            size: page_object.limit,
+            total,
         })
     } else if let Some(offset_object) = pagination.offset {
         check_limit(context, offset_object.limit)?;
@@ -396,6 +420,10 @@ where
                 offset: offset_object.offset,
                 total,
             }),
+            page: current,
+            offset: offset_object.offset,
+            size: offset_object.limit,
+            total,
         })
     } else {
         let start_cursor = edges.first().map(|edge| edge.cursor.clone());
@@ -417,6 +445,10 @@ where
                 offset: 0,
                 total,
             }),
+            page: 1,
+            offset: 0,
+            size: total,
+            total,
         })
     }
 }

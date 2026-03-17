@@ -5,8 +5,8 @@ use crate::{
     EntityCreateOneMutationBuilder, EntityDeleteMutationBuilder, EntityInputBuilder,
     EntityObjectBuilder, EntityQueryFieldBuilder, EntityUpdateMutationBuilder, FilterInputBuilder,
     FilterTypesMapHelper, HavingInputBuilder, OffsetInputBuilder, OneToManyLoader, OneToOneLoader,
-    OrderByEnumBuilder, OrderInputBuilder, PageInfoObjectBuilder, PageInputBuilder,
-    PaginationInfoObjectBuilder, PaginationInputBuilder, RelatedEntityFilter,
+    OrderByEnumBuilder, OrderInputBuilder, PageArgsInputBuilder, PageInfoObjectBuilder,
+    PageInputBuilder, PaginationInfoObjectBuilder, PaginationInputBuilder, RelatedEntityFilter,
     RelatedEntityFilterField,
 };
 use async_graphql::{
@@ -647,6 +647,12 @@ impl Builder {
             )
             .register(
                 PageInputBuilder {
+                    context: self.context,
+                }
+                .input_object(),
+            )
+            .register(
+                PageArgsInputBuilder {
                     context: self.context,
                 }
                 .input_object(),

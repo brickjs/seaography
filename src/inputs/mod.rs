@@ -8,6 +8,9 @@ pub use cursor_input::*;
 pub mod page_input;
 pub use page_input::*;
 
+pub mod page_args_input;
+pub use page_args_input::*;
+
 pub mod offset_input;
 pub use offset_input::*;
 
