@@ -154,11 +154,31 @@ impl PageArgsInputBuilder {
             .get(&self.context.page_args_input.search)
             .map_or(Ok(""), |v| v.string())?;
 
+        let sorts: Vec<Vec<String>> =
+            object
+                .get(&self.context.page_args_input.sorts)
+                .map_or(Vec::from(Vec::new()), |v| {
+                    v.list()
+                        .unwrap()
+                        .iter()
+                        //.map(|x| x.string().unwrap().to_string())
+                        .map(|x| {
+                            let sub: Vec<String> = x
+                                .list()
+                                .unwrap()
+                                .iter()
+                                .map(|x| x.string().unwrap().to_string())
+                                .collect();
+                            sub
+                        })
+                        .collect()
+                });
+
         Ok(PageArgsInput {
             page,
             size,
             search: search.to_string(),
-            sorts: vec![],
+            sorts,
             filters: vec![],
         })
     }

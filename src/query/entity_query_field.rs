@@ -3,11 +3,11 @@ use crate::{
     pluralize_unique, BuilderContext, ConnectionObjectBuilder, DatabaseContext, EntityColumnId,
     EntityObjectBuilder, FilterInputBuilder, GuardAction, HavingInputBuilder, OffsetInput,
     OperationType, OrderInputBuilder, PageArgsInput, PageArgsInputBuilder, PageInput,
-    PaginationInput, PaginationInputBuilder, UserContext,
+    PaginationInput, PaginationInputBuilder, SeaographyError, UserContext,
 };
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use heck::{ToLowerCamelCase, ToSnakeCase};
-use sea_orm::{DatabaseConnection, EntityTrait, Iden, IdenStatic, QueryFilter};
+use sea_orm::{DatabaseConnection, EntityTrait, Iden, IdenStatic, Iterable, QueryFilter};
 
 /// The configuration structure for EntityQueryFieldBuilder
 pub struct EntityQueryFieldConfig {
@@ -221,7 +221,7 @@ impl EntityQueryFieldBuilder {
                 let having = ctx.args.get(&context.entity_query_field.having);
                 let filters = get_having_conditions::<T>(context, &ctx, filters, having)?;
                 let order_by = ctx.args.get(&context.entity_query_field.order_by);
-                let order_by = OrderInputBuilder { context }.parse_object::<T>(order_by)?;
+                let mut order_by = OrderInputBuilder { context }.parse_object::<T>(order_by)?;
                 let pagination = ctx.args.get(&context.entity_query_field.pagination);
                 let mut pagination: PaginationInput =
                     PaginationInputBuilder { context }.parse_object(pagination)?;
@@ -240,6 +240,21 @@ impl EntityQueryFieldBuilder {
                             offset: page_args.page * page_args.size,
                             limit: page_args.size,
                         }),
+                    }
+                }
+                if (page_args.sorts.len() > 0) {
+                    for sort in &page_args.sorts {
+                        let key = sort.get(0).unwrap();
+                        let direction = sort.get(1).unwrap();
+                        let col_name = key.to_snake_case();
+                        let col = T::Column::iter()
+                            .find(|col| col.to_string() == col_name)
+                            .unwrap();
+                        if direction.to_uppercase().eq("DESC") {
+                            order_by.push((col, sea_orm::Order::Desc));
+                        } else {
+                            order_by.push((col, sea_orm::Order::Asc));
+                        }
                     }
                 }
 
