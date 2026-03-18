@@ -1,6 +1,6 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, ObjectAccessor, TypeRef};
 use sea_orm::{
-    ActiveModelTrait, DatabaseConnection, EntityTrait, IntoActiveModel, Iterable,
+    ActiveModelTrait, DatabaseConnection, EntityName, EntityTrait, IntoActiveModel, Iterable,
     PrimaryKeyToColumn, PrimaryKeyTrait,
 };
 
@@ -13,6 +13,8 @@ use crate::{
 pub struct EntityCreateOneMutationConfig {
     /// suffix that is appended on create mutations
     pub mutation_suffix: String,
+    pub mutation_name: Option<crate::SimpleNamingFn>,
+    pub type_name: Option<crate::SimpleNamingFn>,
     /// name for `data` field
     pub data_field: String,
 }
@@ -28,6 +30,8 @@ impl std::default::Default for EntityCreateOneMutationConfig {
                 }
                 .into()
             },
+            mutation_name: None,
+            type_name: None,
             data_field: "data".into(),
         }
     }
@@ -47,11 +51,37 @@ impl EntityCreateOneMutationBuilder {
         let entity_query_field_builder = EntityQueryFieldBuilder {
             context: self.context,
         };
-        format!(
-            "{}{}",
-            entity_query_field_builder.type_name::<T>(),
-            self.context.entity_create_one_mutation.mutation_suffix
-        )
+        match self
+            .context
+            .entity_create_one_mutation
+            .mutation_name
+            .as_ref()
+        {
+            Some(mutation_name) => {
+                mutation_name(entity_query_field_builder.type_name::<T>().as_str())
+            }
+            None => format!(
+                "{}{}",
+                entity_query_field_builder.type_name::<T>(),
+                self.context.entity_create_one_mutation.mutation_suffix
+            ),
+        }
+    }
+
+    pub fn mutation_type_name<T>(&self) -> String
+    where
+        T: EntityTrait,
+    {
+        let entity_object_builder = EntityObjectBuilder {
+            context: self.context,
+        };
+        match self.context.entity_create_one_mutation.type_name.as_ref() {
+            Some(type_name) => {
+                let name: String = <T as EntityName>::table_name(&T::default()).into();
+                type_name(name.as_str())
+            }
+            None => entity_object_builder.basic_type_name::<T>(),
+        }
     }
 
     /// used to get the create mutation field for a SeaORM entity
@@ -76,7 +106,7 @@ impl EntityCreateOneMutationBuilder {
 
         Field::new(
             self.type_name::<T>(),
-            TypeRef::named_nn(entity_object_builder.basic_type_name::<T>()),
+            TypeRef::named_nn(self.mutation_type_name::<T>()),
             move |ctx| {
                 let object_name = object_name.clone();
                 FieldFuture::new(async move {
