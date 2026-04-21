@@ -146,11 +146,15 @@ impl EntityQueryFieldBuilder {
                         let deleted_at_column =
                             T::Column::iter().find(|c| c.to_string() == "deleted_at");
                         if let Some(deleted_at_col) = deleted_at_column {
-                            stmt = stmt.filter(deleted_at_col.eq(
-                                sea_orm::Value::ChronoDateTimeWithTimeZone(Some(
-                                    Utc.timestamp_millis(253402300799997).fixed_offset(),
+                            stmt = stmt.filter(
+                                deleted_at_col.eq(sea_orm::Value::ChronoDateTimeWithTimeZone(
+                                    Some(
+                                        Utc.timestamp_millis_opt(253402300799997)
+                                            .unwrap()
+                                            .fixed_offset(),
+                                    ),
                                 )),
-                            ));
+                            );
                         }
                     }
                     let id_value = mapper.async_graphql_value_to_sea_orm_value::<T>(
@@ -242,7 +246,7 @@ impl EntityQueryFieldBuilder {
                 let page_args: PageArgsInput =
                     PageArgsInputBuilder { context }.parse_object(page_args)?;
                 println!("page_args {:?}", page_args);
-                if page_args.size > 0  {
+                if page_args.size > 0 {
                     pagination = PaginationInput {
                         cursor: None,
                         page: Some(PageInput {
@@ -255,7 +259,7 @@ impl EntityQueryFieldBuilder {
                         }),
                     }
                 }
-                if page_args.sorts.len() > 0  {
+                if page_args.sorts.len() > 0 {
                     for sort in &page_args.sorts {
                         let key = sort.get(0).unwrap();
                         let direction = sort.get(1).unwrap();

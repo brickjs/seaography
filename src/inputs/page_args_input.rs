@@ -2,7 +2,6 @@ use crate::{BuilderContext, Connection, SeaResult};
 use async_graphql::dynamic::{
     InputObject, InputValue, ObjectAccessor, ResolverContext, TypeRef, ValueAccessor,
 };
-use sea_orm::EntityTrait;
 
 /// used to hold information about page pagination
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
