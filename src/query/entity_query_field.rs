@@ -3,10 +3,12 @@ use crate::{
     pluralize_unique, BuilderContext, ConnectionObjectBuilder, DatabaseContext, EntityColumnId,
     EntityObjectBuilder, FilterInputBuilder, GuardAction, HavingInputBuilder, OffsetInput,
     OperationType, OrderInputBuilder, PageArgsInput, PageArgsInputBuilder, PageInput,
-    PaginationInput, PaginationInputBuilder, SeaographyError, UserContext,
+    PaginationInput, PaginationInputBuilder, UserContext,
 };
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use heck::{ToLowerCamelCase, ToSnakeCase};
+use sea_orm::sea_query::prelude::chrono::TimeZone;
+use sea_orm::sea_query::prelude::Utc;
 use sea_orm::{DatabaseConnection, EntityTrait, Iden, IdenStatic, Iterable, QueryFilter};
 
 /// The configuration structure for EntityQueryFieldBuilder
@@ -140,6 +142,17 @@ impl EntityQueryFieldBuilder {
                     // let column = columns[0];
                     let column = columns.iter().find(|c| c.to_string() == "id").unwrap();
 
+                    if cfg!(feature = "with-chrono") {
+                        let deleted_at_column =
+                            T::Column::iter().find(|c| c.to_string() == "deleted_at");
+                        if let Some(deleted_at_col) = deleted_at_column {
+                            stmt = stmt.filter(deleted_at_col.eq(
+                                sea_orm::Value::ChronoDateTimeWithTimeZone(Some(
+                                    Utc.timestamp_millis(253402300799997).fixed_offset(),
+                                )),
+                            ));
+                        }
+                    }
                     let id_value = mapper.async_graphql_value_to_sea_orm_value::<T>(
                         &column,
                         &ctx.args.try_get("id")?,
@@ -228,7 +241,7 @@ impl EntityQueryFieldBuilder {
                 let page_args = ctx.args.get(&context.entity_query_field.page_args);
                 let page_args: PageArgsInput =
                     PageArgsInputBuilder { context }.parse_object(page_args)?;
-
+                println!("page_args {:?}", page_args);
                 if (page_args.size > 0) {
                     pagination = PaginationInput {
                         cursor: None,

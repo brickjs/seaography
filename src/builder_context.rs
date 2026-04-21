@@ -20,6 +20,9 @@ pub mod types_map;
 pub use types_map::*;
 
 pub mod filter_types_map;
+pub mod singular_field_id_map;
+pub use singular_field_id_map::*;
+
 pub use filter_types_map::*;
 
 /// Used to hold the configuration for various aspects

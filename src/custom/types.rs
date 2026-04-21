@@ -182,8 +182,14 @@ where
 {
     fn gql_output_type_ref(context: &'static BuilderContext) -> TypeRef {
         let entity_object_builder = EntityObjectBuilder { context };
-        let entity_name = pluralize_unique(&entity_object_builder.type_name::<E>(), true);
-        let type_name = context.connection_object.type_name.as_ref()(&entity_name);
+        let type_name = entity_object_builder.type_name::<E>();
+        println!("gql_output_type_ref type_name {}", type_name);
+        let entity_name = pluralize_unique(&type_name, true);
+        let type_name = match &context.connection_object.type_complex_name {
+            Some(complex_fn) => complex_fn(entity_name.as_str(), type_name.as_str()),
+            None => context.connection_object.type_name.as_ref()(&entity_name),
+        };
+
         TypeRef::named_nn(type_name)
     }
 
