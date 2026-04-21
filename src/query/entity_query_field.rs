@@ -242,7 +242,7 @@ impl EntityQueryFieldBuilder {
                 let page_args: PageArgsInput =
                     PageArgsInputBuilder { context }.parse_object(page_args)?;
                 println!("page_args {:?}", page_args);
-                if (page_args.size > 0) {
+                if page_args.size > 0  {
                     pagination = PaginationInput {
                         cursor: None,
                         page: Some(PageInput {
@@ -255,7 +255,7 @@ impl EntityQueryFieldBuilder {
                         }),
                     }
                 }
-                if (page_args.sorts.len() > 0) {
+                if page_args.sorts.len() > 0  {
                     for sort in &page_args.sorts {
                         let key = sort.get(0).unwrap();
                         let direction = sort.get(1).unwrap();

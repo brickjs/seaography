@@ -1,4 +1,4 @@
-use crate::{BuilderContext, EntityQueryFieldBuilder};
+use crate::BuilderContext;
 
 pub struct EntityQuerySidFieldBuilder {
     pub context: &'static BuilderContext,

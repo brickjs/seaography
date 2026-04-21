@@ -2,7 +2,7 @@ use crate::{BuilderContext, Connection, SeaResult};
 use async_graphql::dynamic::{
     InputObject, InputValue, ObjectAccessor, ResolverContext, TypeRef, ValueAccessor,
 };
-use sea_orm::{EntityTrait, Select};
+use sea_orm::EntityTrait;
 
 /// used to hold information about page pagination
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -15,8 +15,6 @@ pub struct PageArgsInput {
 }
 
 pub type PageArgsQueryFn<E>
-where
-    E: EntityTrait,
 = Box<dyn Fn(ResolverContext) -> Result<Connection<E>, sea_orm::DbErr> + Sync + Send>;
 
 /// The configuration structure for PageArgsInputBuilder

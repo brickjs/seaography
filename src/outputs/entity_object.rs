@@ -212,8 +212,8 @@ impl EntityObjectBuilder {
             },
         );
         let sid_field = match &self.context.entity_object.short_id_value {
-            Some(short_id) => {
-                let field = Field::new("sid", TypeRef::named(TypeRef::STRING), move |ctx| {
+            Some(_short_id) => {
+                let field = Field::new("sid", TypeRef::named(TypeRef::STRING), move |_ctx| {
                     FieldFuture::from_value(Some(Value::String("sid".to_owned())))
                 });
                 Some(field)

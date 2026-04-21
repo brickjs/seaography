@@ -196,7 +196,7 @@ where
             Some(value) => match value {
                 sea_orm::Value::String(string_opt) => {
                     if let Some(string_value) = string_opt {
-                        if (string_value.as_str() == "___-999999___") {
+                        if string_value.as_str() == "___-999999___"  {
                             active_model.try_set(column, sea_orm::Value::String(None))?;
                         } else {
                             active_model
@@ -206,7 +206,7 @@ where
                 }
                 sea_orm::Value::Int(numeric_value_opt) => {
                     if let Some(numeric_value) = numeric_value_opt {
-                        if (numeric_value == -999999) {
+                        if numeric_value == -999999  {
                             active_model.try_set(column, sea_orm::Value::Int(None))?;
                         } else {
                             active_model.try_set(column, value)?;
@@ -215,7 +215,7 @@ where
                 }
                 sea_orm::Value::BigInt(numeric_value_opt) => {
                     if let Some(numeric_value) = numeric_value_opt {
-                        if (numeric_value == -999999) {
+                        if numeric_value == -999999  {
                             active_model.try_set(column, sea_orm::Value::BigInt(None))?;
                         } else {
                             active_model.try_set(column, value)?;
@@ -224,7 +224,7 @@ where
                 }
                 sea_orm::Value::Float(numeric_value_opt) => {
                     if let Some(numeric_value) = numeric_value_opt {
-                        if (numeric_value == -999999.0) {
+                        if numeric_value == -999999.0  {
                             active_model.try_set(column, sea_orm::Value::Float(None))?;
                         } else {
                             active_model.try_set(column, value)?;
@@ -233,7 +233,7 @@ where
                 }
                 sea_orm::Value::Double(numeric_value_opt) => {
                     if let Some(numeric_value) = numeric_value_opt {
-                        if (numeric_value == -999999.0) {
+                        if numeric_value == -999999.0  {
                             active_model.try_set(column, sea_orm::Value::Double(None))?;
                         } else {
                             active_model.try_set(column, value)?;
